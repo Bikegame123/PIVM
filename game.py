@@ -4,18 +4,18 @@ import sys
 import math
 from perlin_noise import PerlinNoise
 import datetime # NEW: For timestamp
-import firebase_admin 
+import firebase_admin
 from firebase_admin import credentials, firestore
 
 # --- WII BOARD INTEGRATION START ---
 # Make sure you have installed evdev: sudo apt install python3-evdev
-import threading
-from evdev import InputDevice, categorize, ecodes, list_devices
+# import threading  # <-- DISABLED FOR TESTING
+# from evdev import InputDevice, categorize, ecodes, list_devices # <-- DISABLED FOR TESTING
 # --- WII BOARD INTEGRATION END ---
 
 
 # --- FIREBASE INTEGRATION START ---
-# IMPORTANT: Replace 'path/to/your/serviceAccountKey.json' 
+# IMPORTANT: Replace 'path/to/your/serviceAccountKey.json'
 # with the actual path to the JSON file you downloaded and secured.
 SERVICE_ACCOUNT_KEY_PATH = "path/to/your/serviceAccountKey.json"
 
@@ -158,59 +158,63 @@ TILT_THRESHOLD = 2000 # We will need to tune this!
 
 def find_balance_board():
     """Finds the Wii Balance Board from the list of input devices."""
-    devices = [InputDevice(path) for path in list_devices()]
-    for device in devices:
-        # This is the exact name your board reported
-        if device.name == "Nintendo Wii Remote Balance Board":
-            print(f"Found Balance Board: {device.path}")
-            return device
+    # --- DISABLED FOR TESTING ---
     return None
+    # devices = [InputDevice(path) for path in list_devices()]
+    # for device in devices:
+    #     # This is the exact name your board reported
+    #     if device.name == "Nintendo Wii Remote Balance Board":
+    #         print(f"Found Balance Board: {device.path}")
+    #         return device
+    # return None
 
 def balance_board_reader(device):
     """
     This function runs in a separate thread to constantly read
     data from the balance board.
     """
-    global player_direction, weights
-    try:
-        # Get exclusive access to the device
-        device.grab() 
-        print("Balance Board thread started. Step on the board!")
-        for event in device.read_loop():
-            if event.type == ecodes.EV_ABS:
-                # This is the exact sensor map we found for your board
-                if event.code == ecodes.ABS_HAT0X:     # Top-Right (TR)
-                    weights['TR'] = event.value
-                elif event.code == ecodes.ABS_HAT1X:     # Top-Left (TL)
-                    weights['TL'] = event.value
-                elif event.code == ecodes.ABS_HAT0Y:     # Bottom-Right (BR)
-                    weights['BR'] = event.value
-                elif event.code == ecodes.ABS_HAT1Y:     # Bottom-Left (BL)
-                    weights['BL'] = event.value
-                
-                # --- Calculate Tilt ---
-                left_total = weights['TL'] + weights['BL']
-                right_total = weights['TR'] + weights['BR']
-                total_weight = left_total + right_total
+    # --- ENTIRE FUNCTION BODY DISABLED FOR TESTING ---
+    pass
+    # global player_direction, weights
+    # try:
+    #     # Get exclusive access to the device
+    #     device.grab()
+    #     print("Balance Board thread started. Step on the board!")
+    #     for event in device.read_loop():
+    #         if event.type == ecodes.EV_ABS:
+    #             # This is the exact sensor map we found for your board
+    #             if event.code == ecodes.ABS_HAT0X:      # Top-Right (TR)
+    #                 weights['TR'] = event.value
+    #             elif event.code == ecodes.ABS_HAT1X:    # Top-Left (TL)
+    #                 weights['TL'] = event.value
+    #             elif event.code == ecodes.ABS_HAT0Y:    # Bottom-Right (BR)
+    #                 weights['BR'] = event.value
+    #             elif event.code == ecodes.ABS_HAT1Y:    # Bottom-Left (BL)
+    #                 weights['BL'] = event.value
+    #             
+    #             # --- Calculate Tilt ---
+    #             left_total = weights['TL'] + weights['BL']
+    #             right_total = weights['TR'] + weights['BR']
+    #             total_weight = left_total + right_total
 
-                # Only register tilt if there is significant weight on the board
-                if total_weight > 1000: # Adjust if needed
-                    if left_total > right_total + TILT_THRESHOLD:
-                        player_direction = -1 # Go Left
-                    elif right_total > left_total + TILT_THRESHOLD:
-                        player_direction = 1  # Go Right
-                    else:
-                        player_direction = 0  # Stop
-                else:
-                    player_direction = 0 # No one on the board
-                    
-    except Exception as e:
-        print(f"Error reading from balance board: {e}")
-        print("Please ensure you are running this script with 'sudo'")
-        player_direction = 0 # Failsafe
-    finally:
-        if 'device' in locals() and device:
-            device.ungrab()
+    #             # Only register tilt if there is significant weight on the board
+    #             if total_weight > 1000: # Adjust if needed
+    #                 if left_total > right_total + TILT_THRESHOLD:
+    #                     player_direction = -1 # Go Left
+    #                 elif right_total > left_total + TILT_THRESHOLD:
+    #                     player_direction = 1  # Go Right
+    #                 else:
+    #                     player_direction = 0  # Stop
+    #             else:
+    #                 player_direction = 0 # No one on the board
+    #             
+    # except Exception as e:
+    #     print(f"Error reading from balance board: {e}")
+    #     print("Please ensure you are running this script with 'sudo'")
+    #     player_direction = 0 # Failsafe
+    # finally:
+    #     if 'device' in locals() and device:
+    #         device.ungrab()
 # --- WII BOARD INTEGRATION END ---
 
 
@@ -251,7 +255,7 @@ def get_player_id():
                     input_active = False
                 elif event.key == pygame.K_BACKSPACE: player_id_str, error_message = player_id_str[:-1], ""
                 # Allow only letters and limit length
-                elif event.unicode.isalpha() and len(player_id_str) < 4: 
+                elif event.unicode.isalpha() and len(player_id_str) < 4:
                     player_id_str += event.unicode.upper() # Use uppercase for consistent usernames
                     error_message = ""
         # NEW: Draw to the virtual 'screen'
@@ -438,7 +442,7 @@ def submit_score_to_firebase(user_id, score):
     try:
         score_data = {
             # MATCHING YOUR DB STRUCTURE: 'name' and 'score'
-            'name': user_id, 
+            'name': user_id,
             'score': int(score),
             'timestamp': datetime.datetime.now()
         }
@@ -464,11 +468,14 @@ def main():
         print("!! ERROR: No Wii Balance Board found. !!")
         print("Make sure it's connected via Bluetooth.")
         print("You may need to run this with 'sudo'.")
+        print("Falling back to keyboard controls.")
         print("="*40 + "\n")
     else:
         # Start the balance board reader in its own thread
-        reader_thread = threading.Thread(target=balance_board_reader, args=(board,), daemon=True)
-        reader_thread.start()
+        # --- DISABLED FOR TESTING ---
+        # reader_thread = threading.Thread(target=balance_board_reader, args=(board,), daemon=True)
+        # reader_thread.start()
+        print("Wii board found, but reader thread is DISABLED for testing.")
     # --- WII BOARD INTEGRATION END ---
 
     while True:
